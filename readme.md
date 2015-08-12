@@ -77,7 +77,7 @@ here is perf results so far..
 
 ## Performance Benchmark
 
-Calculate 20th Fibonacci number in its series. (approx. compute time for 1 item is 15 ms)
+Calculate nth Fibonacci number in its series.
 
 | Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime |
 |:---|:---------|:----|:----|:----------|:------------|:------------|
