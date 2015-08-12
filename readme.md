@@ -1,4 +1,4 @@
-# CustomThreadPool
+﻿# CustomThreadPool
 Custom ThreadPool Implementation for compute work on servers (Sample compute is N th Fibonacci Number).
 See benchmark results at the bottom of the page.
 
@@ -42,7 +42,7 @@ using (var threadPool = new CustomThreadPool1(new CustomThreadPoolSettings(10,20
 
 This creates a `CustomThreadPool1` object which allocates a fixed minimum number of threads, each will process enqueued work items in parallel.
 
-## Documentation on Multi-Threaded Pool
+## Some thoughts on Multi-Threaded Pool
 
 Improper configuration of a thread pool can have a serious impact on the performance of your application. This documentation describes the issues and things you need to consider when designing your application which uses this thread pool implementation.
 A thread pool is a collection of threads which is processing the user's work items as they are enqueued. The user work item is a delegate supplied by application code, this delegate contains any compute or IO work that user needs to perform concurrently.
@@ -54,7 +54,7 @@ If your application have strict processing order requirement then CustomThreadPo
 # Configuring Thread Pool:
 This is importent design consideration, how many threads you would put as min and max limits on the pool.
 Both implementation of custom thread pool can grow and shrink when necessary in response to changes in an application's work load. All thread pools have at least one thread, but a thread pool can grow as the demand for threads increases, up to the pool's maximum size. Threads may also be terminated automatically when they have been idle for some time.
-The dynamic nature is determined by configuration of the thread pool's min and max setting values. The value of ThreadIdleTime determines whether and how quickly a thread pool can shrink to a size of 1.
+The dynamic nature is determined by configuration of the thread pool's min and max setting values. The value of ThreadIdleTime determines whether and how quickly a thread pool can shrink to a size of min. limit.
 
 You should do careful analysis of your application to choose an appropriate maximum size for a thread pool. For example, in compute-bound applications it is best to limit the number of threads to the number of physical processor cores or threads on the host machine; adding any more threads will increase context switches and reduces performance. Increasing the size of the pool beyond the number of cores can improve responsiveness when threads can become blocked while waiting for the operating system to complete a task, such as a network or file operation. On the other hand, a thread pool configured with too many threads can have the opposite effect and negatively impact performance. Test your application in a realistic environment for determining the optimum size for a thread pool
 
