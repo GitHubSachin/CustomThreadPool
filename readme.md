@@ -9,10 +9,11 @@ See benchmark results at the bottom of the page.
    Once worker threads finish executing their activities, they are then returned to the thread pool. If there is no work, threads will self-destroy after approximately 2 minutes of inactivity.
 4. Once minimum thread count is reached, pool would create new thread every 100ms, this is important to avoid sudden burst of resources for increased load, because there may be other threads getting released.
    (We may have to tune this, delaying new thread creation may result latency in processing but helps to level the load on system resources (this is double edge sword, might need some further tuning)
-5. Careful considerations on spending too much time in synchronization and locking, this may affect throughput
+5. Be careful on spending too much time in synchronization and locking, this may affect throughput
 6. Think about diagnostics in the pool, how would you diagnose issues if you need to, one option is to use ETW events for internal tracing and telemetry on pool.
 7. Max thread limits on pool size is .net framework ThreadPool.GetMaxThreads value.
 8. Allow caller to cancel all work items in the pool if needed. Also allow cancelling individual work item compute work without cancelling entire pool.
+9. User is responsible to implement work item delegate which should honor cancellation support, if pool is requested to be stopped.
 
 ## Some Assumptions:
 1. User will set appropriate limits of min and max threads in the application as per their expected workload.
@@ -33,14 +34,13 @@ PS> Install-package CustomThreadPool
 You can create a `CustomThreadPool` instance via the following API:
 
 ```csharp
-using (var threadPool = new CustomThreadPool(
-        new CustomThreadPoolSettings(10,20)))
+using (var threadPool = new CustomThreadPool1(new CustomThreadPoolSettings(10,20),CancellationToken.None))
 {
     threadPool.QueueUserWorkItem(() => { ... }));
 }
 ```
 
-This creates a `CustomThreadPool` object which allocates a fixed minimum number of threads, each will process enqueued work items in parallel.
+This creates a `CustomThreadPool1` object which allocates a fixed minimum number of threads, each will process enqueued work items in parallel.
 
 ## Documentation on Multi-Threaded Pool
 
@@ -70,7 +70,7 @@ Here I tried to avoid global queue, by partitioning the queue across each worker
 
 Now after having both implementation ready, I decided to test and compare with standard .net threadpool, and realized that the data structures and locking I am using for queue is causing bad performance on enqueue, 
 so now I am experimenting on another idea, what if I can create some data structure so that I can enqueue and dequeue work as fast as possible without any locking overhead at all??
-next step is to replace .net queue class with a doubly linked list which will be written such a way that queue will not use any locks and will just do a form of a spin lock... let’s see how much it helps, who knows what else is next.
+next step is to replace .net queue class with a doubly linked list which will be written such a way that queue will not use any locks and will just do a form of a spin lock... letâ€™s see how much it helps, who knows what else is next.
 
 here is perf results so far..
 
@@ -79,32 +79,35 @@ here is perf results so far..
 Calculate 20th Fibonacci number in its series. (approx. compute time for 1 item is 15 ms)
 
 | Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime |
-|-------------------------------------------------------------------|
+|:---|:---------|:----|:----|:----------|:------------|:------------|
 | 1  | Custom1  | 10  | 100 | 1000      | 0.0468709   | 0.0625564   |
 | 2  | Custom1  | 10  | 100 | 10000     | 0.2030604   | 0.5311822   |
 | 3  | Custom1  | 10  | 100 | 100000    | 0.5468608   | 5.4061451   |
 | 4  | Custom1  | 10  | 100 | 1000000   | 7.5311008   | 57.2411899  |
 
-
 | Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime |
-|-------------------------------------------------------------------|
+|:---|:---------|:----|:----|:----------|:------------|:------------|
 | 1  | Custom2  | 10  | 100 | 1000      | 0.0781229   | 0.093751    |
 | 2  | Custom2  | 10  | 100 | 10000     | 0.9167963   | 0.9324233   |
 | 3  | Custom2  | 10  | 100 | 100000    | 7.7682885   | 8.5339231   |
 | 4  | Custom2  | 10  | 100 | 1000000   | 12.4689065  | 57.4889367  |
 
+
+
 | Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime |
-|-------------------------------------------------------------------|
+|:---|:---------|:----|:----|:----------|:------------|:------------|
 | 1  | .net     | 10  | 100 | 1000      | 0           | 0.0781268   |
 | 2  | .net     | 10  | 100 | 10000     | 0           | 0.5312566   |
 | 3  | .net     | 10  | 100 | 100000    | 0.1093742   | 5.3125669   |
 | 4  | .net     | 10  | 100 | 1000000   | 2.7812817   | 53.2116138  |
 
+
+
 ## Some notes
 can we use ReaderWriterLockSlim which allows multiple readers to coexist with a single writer on thread queue? 
 how to create non blocking queue??
 
-For workload which has very small execution time, it’s best to keep max limit on pool size to smaller, this gives better performance, when used with workloads with higher execution time, adding more threads to the pool starts to benefit.
+For workload which has very small execution time, itâ€™s best to keep max limit on pool size to smaller, this gives better performance, when used with workloads with higher execution time, adding more threads to the pool starts to benefit.
 After some limit actually bigger pool size affects performance adversely.
 
 ## License
