@@ -1,0 +1,28 @@
+﻿<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>ThreadPoolLibrary.CustomThreadPool</id>
+    <version>1.0.0</version>
+    <title>ThreadPoolLibrary.CustomThreadPool</title>
+    <authors>sample</authors>
+    <owners>sample</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>
+      This is a nuget package for ThreadPoolLibrary.CustomThreadPool library implementation for compute work on servers.
+    </description>
+    <releaseNotes></releaseNotes>
+    <copyright></copyright>
+    <tags>CustomThreadPool;ThreadPool</tags>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System" targetFramework="net40" />
+      <frameworkAssembly assemblyName="System.Core" targetFramework="net40" />
+      <frameworkAssembly assemblyName="System.Runtime.Serialization" targetFramework="net40" />
+    </frameworkAssemblies>
+  </metadata>
+  <files>
+    <file src="bin\release\ThreadPoolLibrary.dll" target="lib\net45\ThreadPoolLibrary.dll" />
+    <file src="bin\release\ThreadPoolLibrary.pdb" target="lib\net45\ThreadPoolLibrary.pdb" />
+    <file src="bin\release\ThreadPoolLibrary.xml" target="lib\net45\ThreadPoolLibrary.xml" />
+    <file src="..\ThreadPoolLibrary\**\*.*" target="src" exclude="**\bin\**\*.*;**\obj\**\*.*;bin\*.xml;**\*.user;**\*.vspscc" />
+  </files>
+</package>
