@@ -68,6 +68,7 @@ Here I tried to avoid global queue, by partitioning the queue across each worker
 1. round robin across all workers in the pool, this is simple, but not optimal because some work will be stuck behind some long running operations already running on workers
 2. minimum assigned task strategy will assign the task to any of the worker threads with the fewest tasks already running. Here I wrote algorithm to randomly choose among the worker with the fewest tasks.
 
+#Next Steps:
 Now after having both implementation ready, I decided to test and compare with standard .net threadpool, and realized that the data structures and locking I am using for queue is causing bad performance on enqueue, 
 so now I am experimenting on another idea, what if I can create some data structure so that I can enqueue and dequeue work as fast as possible without any locking overhead at all??
 next step is to replace .net queue class with a doubly linked list which will be written such a way that queue will not use any locks and will just do a form of a spin lock... let’s see how much it helps, who knows what else is next.
