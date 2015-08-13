@@ -26,6 +26,9 @@ namespace PerfTestConsoleApp
         public int Iteration { get; set; }
         public double EnqueueTime { get; set; }
         public double ProcessingTime { get; set; }
+        public int G0Collect { get; set; }
+        public int G1Collect { get; set; }
+        public int G2Collect { get; set; }
     }
 
     internal class TestExecution
@@ -49,6 +52,7 @@ namespace PerfTestConsoleApp
                         PoolType = testConfig.PoolType,
                         Iteration = (i + 1), //i is zero based
                     };
+                    
                     var pool = CreatePool(testConfig.PoolType, new ThreadPoolSettings()
                     {
                         MaxThreads = testConfig.MaxThreads,
@@ -57,30 +61,39 @@ namespace PerfTestConsoleApp
 
                     try
                     {
-                        int count = 0;
-                        DateTime dtStart = DateTime.UtcNow;
-                        for (int j = 0; j < testConfig.NoOfWorkItems; j++)
+                        int g0collects = GC.CollectionCount(0);
+                        int g1collects = GC.CollectionCount(1);
+                        int g2collects = GC.CollectionCount(2);
+
+                        using (var countdown = new CountdownEvent(testConfig.NoOfWorkItems))
                         {
-                            pool.QueueUserWorkItem((token, userdata) =>
+                            DateTime dtStart = DateTime.UtcNow;
+                            for (int j = 0; j < testConfig.NoOfWorkItems; j++)
                             {
-                                CalculateNthFibonaci(NthFibonaciToCalculate);
-                                Interlocked.Increment(ref count);
-                            }, j);
+                                pool.QueueUserWorkItem((token, userdata) =>
+                                {
+                                    CalculateNthFibonaci(NthFibonaciToCalculate);
+                                    countdown.Signal(1);
+
+                                }, j);
+                            }
+                            result.EnqueueTime = DateTime.UtcNow.Subtract(dtStart).TotalSeconds;
+                            countdown.Wait();
+                            //finished, record execution time
+                            result.ProcessingTime = DateTime.UtcNow.Subtract(dtStart).TotalSeconds;
                         }
-                        //enqueued all items, calculate end time.
-                        result.EnqueueTime = DateTime.UtcNow.Subtract(dtStart).TotalSeconds;
-                        //now wait
-                        while (count < testConfig.NoOfWorkItems)
-                        {
-                            Thread.Sleep(1);
-                        }
-                        //finished, record execution time
-                        result.ProcessingTime = DateTime.UtcNow.Subtract(dtStart).TotalSeconds;
+                        
+                        result.G0Collect = (GC.CollectionCount(0) - g0collects);
+                        result.G1Collect = (GC.CollectionCount(1) - g1collects);
+                        result.G2Collect = (GC.CollectionCount(2) - g2collects);
+          
                         allresults.Add(result);
                     }
                     finally
                     {
                         pool.Dispose();
+                        GC.Collect(2);
+                        GC.WaitForPendingFinalizers();
                     }
                 }
             }
