@@ -72,7 +72,16 @@ Here I tried to avoid global queue, by partitioning the queue across each worker
 #Next Steps:
 Now after having both implementation ready, I decided to test and compare with standard .net threadpool, and realized that the data structures and locking I am using for queue is causing bad performance on enqueue, 
 so now I am experimenting on another idea, what if I can create some data structure so that I can enqueue and dequeue work as fast as possible without any locking overhead at all??
-next step is to replace .net queue class with a doubly linked list which will be written such a way that queue will not use any locks and will just do a form of a spin lock... let’s see how much it helps, who knows what else is next.
+next step is to replace .net queue class with a doubly linked list which will be written such a way that queue will not use any locks and will just do a form of a spin lock... let’s see how much it helps.
+various patterns like combination of work stealing and distribution with both global and local queues. The concept will be 
+1. One global queue
+2. each thread have local queue
+3. when work is added from pool thread it goes to local queue
+4. when work is added from non pool thread it goes to global queue
+5. pool threads are processing work in this order
+-check local queue, for new item
+-check global queue, for new item
+-get item from neighbour.
 
 here is perf results so far..
 
