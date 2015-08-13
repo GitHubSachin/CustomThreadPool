@@ -21,6 +21,7 @@ See benchmark results at the bottom of the page.
 3. Pool configuration are set at the time of creation, no dynamic support so far.
 4. User implements ThreadPoolWorkItemExceptionHandler to handle work items which fail on compute, see example on error handling for work items.
 This delegate invokes on pool worker thread so any long blocking code written on error handler delegate will affect pool performance.
+5. Not handling ExecutionContext for now, but to be added in future.
 
 ## Installation (coming soon)
 You can install `CustomThreadPool` via NuGet! (package not ready yet)
