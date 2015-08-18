@@ -66,9 +66,9 @@ This implementation I am using both approaches of #1 and #2 above with addition 
 3. when work is added from pool thread it goes to its local queue
 4. when work is added from non pool thread it goes to global queue
 5. pool threads are processing work in this order
--check local queue, for new item
--check global queue, for new item
--get item from neighbour.
+(1) check local queue for new item, 
+(2) check global queue for new item, 
+(3) get item from neighbour thread.
 
 ## Performance Benchmark
 
