@@ -43,22 +43,6 @@ using (var threadPool = new CustomThreadPool1(new CustomThreadPoolSettings(10,20
 
 This creates a `CustomThreadPool1` object which allocates a fixed minimum number of threads, each will process enqueued work items in parallel.
 
-## Some thoughts on Multi-Threaded Pool
-
-Improper configuration of a thread pool can have a serious impact on the performance of your application. This documentation describes the issues and things you need to consider when designing your application which uses this thread pool implementation.
-A thread pool is a collection of threads which is processing the user's work items as they are enqueued. The user work item is a delegate supplied by application code, this delegate contains any compute or IO work that user needs to perform concurrently.
-Configuring a thread pool to support min, max limits implies that the application is prepared to dispatch work item operation concurrently.
-
-When using a multi-threaded pool implementation like CustomThreadPool2, the thread scheduling nature is nondeterministic which means that requests may not be processed in the order they were received. Some applications cannot tolerate this behavior, such as a transaction processing server that must guarantee that requests are executed in order.
-If your application have strict processing order requirement then CustomThreadPool1 implementation will be good to use, in this implementation all items are serially put in one queue and processed in order.
-
-# Configuring Thread Pool:
-This is importent design consideration, how many threads you would put as min and max limits on the pool.
-Both implementation of custom thread pool can grow and shrink when necessary in response to changes in an application's work load. All thread pools have at least one thread, but a thread pool can grow as the demand for threads increases, up to the pool's maximum size. Threads may also be terminated automatically when they have been idle for some time.
-The dynamic nature is determined by configuration of the thread pool's min and max setting values. The value of ThreadIdleTime determines whether and how quickly a thread pool can shrink to a size of min. limit.
-
-You should do careful analysis of your application to choose an appropriate maximum size for a thread pool. For example, in compute-bound applications it is best to limit the number of threads to the number of physical processor cores or threads on the host machine; adding any more threads will increase context switches and reduces performance. Increasing the size of the pool beyond the number of cores can improve responsiveness when threads can become blocked while waiting for the operating system to complete a task, such as a network or file operation. On the other hand, a thread pool configured with too many threads can have the opposite effect and negatively impact performance. Test your application in a realistic environment for determining the optimum size for a thread pool
-
 # CustomThreadPool1
 This implementation have one global queue, and worker threads trying to dequeue items from it and process it, after I wrote this, I quickly realized this solution makes large contention on global queue, as number of threads increase, the performance degrades because it takes long time to enqueue work items and worker threads are waiting for lock releases.
 however this works well on low core systems on low concurrency levels.
@@ -73,17 +57,18 @@ Here I tried to avoid global queue, by partitioning the queue across each worker
 Now after having both implementation ready, I decided to test and compare with standard .net threadpool, and realized that the data structures and locking I am using for queue is causing bad performance on enqueue, 
 so now I am experimenting on another idea, what if I can create some data structure so that I can enqueue and dequeue work as fast as possible without any locking overhead at all??
 next step is to replace .net queue class with a doubly linked list which will be written such a way that queue will not use any locks and will just do a form of a spin lock... let’s see how much it helps.
-various patterns like combination of work stealing and distribution with both global and local queues. The concept will be 
-1. One global queue
-2. each thread have local queue
-3. when work is added from pool thread it goes to local queue
+
+#CustomThreadPool3 (coming soon..)
+This implementation I am using both approaches of #1 and #2 above with addition to some twist on optimizing the work scheduling and assignment. It turns out that most of the multithreaded applications involve some sort of recursive divide and conquer kind of work loads, in such cases, it’s important to pay attention on how you enqueue the work, for example the work enqueued from the pool threads can be added to its local queue, this will be very fast because there will be no locking on local queue. However new work coming from the outside pool thread can go to global queue (with some locking involved). With this approach we need to design a thread local queue which is lock free for local operations but uses some locking when accessed from another threads, this is how we distribute work efficiently. The algorithm works like this:
+
+1. There is One global queue
+2. each thread have local queue (special type if queue we will talk in details later)
+3. when work is added from pool thread it goes to its local queue
 4. when work is added from non pool thread it goes to global queue
 5. pool threads are processing work in this order
 -check local queue, for new item
 -check global queue, for new item
 -get item from neighbour.
-
-here is perf results so far..
 
 ## Performance Benchmark
 
@@ -112,6 +97,21 @@ Calculate nth Fibonacci number in its series.
 | 3  | .net     | 10  | 100 | 100000    | 0.1093742   | 5.3125669   |
 | 4  | .net     | 10  | 100 | 1000000   | 2.7812817   | 53.2116138  |
 
+## Some thoughts on Multi-Threaded Pool
+
+Improper configuration of a thread pool can have a serious impact on the performance of your application. This documentation describes the issues and things you need to consider when designing your application which uses this thread pool implementation.
+A thread pool is a collection of threads which is processing the user's work items as they are enqueued. The user work item is a delegate supplied by application code, this delegate contains any compute or IO work that user needs to perform concurrently.
+Configuring a thread pool to support min, max limits implies that the application is prepared to dispatch work item operation concurrently.
+
+When using a multi-threaded pool implementation like CustomThreadPool2, the thread scheduling nature is nondeterministic which means that requests may not be processed in the order they were received. Some applications cannot tolerate this behavior, such as a transaction processing server that must guarantee that requests are executed in order.
+If your application have strict processing order requirement then CustomThreadPool1 implementation will be good to use, in this implementation all items are serially put in one queue and processed in order.
+
+# Configuring Thread Pool:
+This is importent design consideration, how many threads you would put as min and max limits on the pool.
+Both implementation of custom thread pool can grow and shrink when necessary in response to changes in an application's work load. All thread pools have at least one thread, but a thread pool can grow as the demand for threads increases, up to the pool's maximum size. Threads may also be terminated automatically when they have been idle for some time.
+The dynamic nature is determined by configuration of the thread pool's min and max setting values. The value of ThreadIdleTime determines whether and how quickly a thread pool can shrink to a size of min. limit.
+
+You should do careful analysis of your application to choose an appropriate maximum size for a thread pool. For example, in compute-bound applications it is best to limit the number of threads to the number of physical processor cores or threads on the host machine; adding any more threads will increase context switches and reduces performance. Increasing the size of the pool beyond the number of cores can improve responsiveness when threads can become blocked while waiting for the operating system to complete a task, such as a network or file operation. On the other hand, a thread pool configured with too many threads can have the opposite effect and negatively impact performance. Test your application in a realistic environment for determining the optimum size for a thread pool
 
 
 ## Some notes
