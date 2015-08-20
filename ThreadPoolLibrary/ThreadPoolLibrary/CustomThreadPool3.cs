@@ -27,7 +27,7 @@ namespace ThreadPoolLibrary
     /// With this approach we get a thread local queue which is lock free for local operations but uses some locking when accessed from another threads, this is how we distribute work efficiently, 
     /// when other threads finish their work, they can start borrowing work from busy running threads and we get good parallelism.
     /// </remarks>
-    public class CustomThreadPool3 : CustomThreadPool
+    public sealed class CustomThreadPool3 : CustomThreadPool
     {
         private class WorkerThreadStartParams
         {
@@ -52,7 +52,7 @@ namespace ThreadPoolLibrary
         [ThreadStatic]
         private static ThreadLocalStealQueue<ThreadPoolWorkItem> _mWsq;
 
-        private ConcurrentDictionary<string, Thread> _workerThreads = new ConcurrentDictionary<string, Thread>();
+        private readonly ConcurrentDictionary<string, Thread> _workerThreads = new ConcurrentDictionary<string, Thread>();
 
         /// <summary>
         /// Creates new threadpool with given settings and cancel token values

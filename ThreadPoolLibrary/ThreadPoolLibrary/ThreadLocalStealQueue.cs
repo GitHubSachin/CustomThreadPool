@@ -1,45 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Threading;
 
 namespace ThreadPoolLibrary
 {
-    public class ThreadLocalStealQueue<T>
+    /// <summary>
+    /// Represents a thread local queue which allows lock free enqueue and dequeue operations
+    /// and also support taking item out of the queue by another thread. This is useful when other threads
+    /// in the pool are idle and they can borrow work items from threads which have their outstanding items in their local queues.
+    /// It helps to distribute work evenly across the pool and let all threads help each others
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    internal class ThreadLocalStealQueue<T>
     {
 
-        private const int INITIAL_SIZE = 32;
+        private const int InitialSize = 32;
 
-        private T[] m_array = new T[INITIAL_SIZE];
+        private T[] _mArray = new T[InitialSize];
 
-        private int m_mask = INITIAL_SIZE - 1;
+        private int _mMask = InitialSize - 1;
 
-        private volatile int m_headIndex = 0;
+        private volatile int _mHeadIndex = 0;
 
-        private volatile int m_tailIndex = 0;
+        private volatile int _mTailIndex = 0;
 
-        private object m_foreignLock = new object();
+        private readonly object _mForeignLock = new object();
 
         public string Name { get; set; }
 
         public bool IsEmpty
         {
 
-            get { return m_headIndex >= m_tailIndex; }
+            get { return _mHeadIndex >= _mTailIndex; }
 
         }
-
-
-
+        
         public int Count
         {
 
-            get { return m_tailIndex - m_headIndex; }
+            get { return _mTailIndex - _mHeadIndex; }
 
         }
-
 
         /// <summary>
         /// Adds item to local queue from the thread.
@@ -48,51 +47,51 @@ namespace ThreadPoolLibrary
         public void LocalPush(T obj)
         {
 
-            int tail = m_tailIndex;
+            int tail = _mTailIndex;
 
-            if (tail < m_headIndex + m_mask)
+            if (tail < _mHeadIndex + _mMask)
             {
 
-                m_array[tail & m_mask] = obj;
+                _mArray[tail & _mMask] = obj;
 
-                m_tailIndex = tail + 1;
+                _mTailIndex = tail + 1;
 
             }
 
             else
             {
 
-                lock (m_foreignLock)
+                lock (_mForeignLock)
                 {
 
-                    int head = m_headIndex;
+                    int head = _mHeadIndex;
 
-                    int count = m_tailIndex - m_headIndex;
+                    int count = _mTailIndex - _mHeadIndex;
 
-                    if (count >= m_mask)
+                    if (count >= _mMask)
                     {
 
-                        T[] newArray = new T[m_array.Length << 1];
+                        T[] newArray = new T[_mArray.Length << 1];
 
-                        for (int i = 0; i < m_array.Length; i++)
+                        for (int i = 0; i < _mArray.Length; i++)
 
-                            newArray[i] = m_array[(i + head) & m_mask];
+                            newArray[i] = _mArray[(i + head) & _mMask];
 
                         // Reset the field values, incl. the mask.
 
-                        m_array = newArray;
+                        _mArray = newArray;
 
-                        m_headIndex = 0;
+                        _mHeadIndex = 0;
 
-                        m_tailIndex = tail = count;
+                        _mTailIndex = tail = count;
 
-                        m_mask = (m_mask << 1) | 1;
+                        _mMask = (_mMask << 1) | 1;
 
                     }
 
-                    m_array[tail & m_mask] = obj;
+                    _mArray[tail & _mMask] = obj;
 
-                    m_tailIndex = tail + 1;
+                    _mTailIndex = tail + 1;
 
                 }
 
@@ -109,20 +108,20 @@ namespace ThreadPoolLibrary
         public bool LocalPop(ref T obj)
         {
 
-            int tail = m_tailIndex;
+            int tail = _mTailIndex;
 
-            if (m_headIndex >= tail)
+            if (_mHeadIndex >= tail)
 
                 return false;
 
             tail -= 1;
 
-            Interlocked.Exchange(ref m_tailIndex, tail);
+            Interlocked.Exchange(ref _mTailIndex, tail);
 
-            if (m_headIndex <= tail)
+            if (_mHeadIndex <= tail)
             {
 
-                obj = m_array[tail & m_mask];
+                obj = _mArray[tail & _mMask];
 
                 return true;
 
@@ -131,15 +130,15 @@ namespace ThreadPoolLibrary
             else
             {
 
-                lock (m_foreignLock)
+                lock (_mForeignLock)
                 {
 
-                    if (m_headIndex <= tail)
+                    if (_mHeadIndex <= tail)
                     {
 
                         // Element still available. Take it.
 
-                        obj = m_array[tail & m_mask];
+                        obj = _mArray[tail & _mMask];
 
                         return true;
 
@@ -150,7 +149,7 @@ namespace ThreadPoolLibrary
 
                         // We lost the race, element was stolen, restore the tail.
 
-                        m_tailIndex = tail + 1;
+                        _mTailIndex = tail + 1;
 
                         return false;
 
@@ -163,7 +162,6 @@ namespace ThreadPoolLibrary
         }
 
 
-
         public bool TrySteal(ref T obj, int millisecondsTimeout = 100)
         {
 
@@ -172,19 +170,19 @@ namespace ThreadPoolLibrary
             try
             {
 
-                taken = Monitor.TryEnter(m_foreignLock, millisecondsTimeout);
+                taken = Monitor.TryEnter(_mForeignLock, millisecondsTimeout);
 
                 if (taken)
                 {
 
-                    int head = m_headIndex;
+                    int head = _mHeadIndex;
 
-                    Interlocked.Exchange(ref m_headIndex, head + 1);
+                    Interlocked.Exchange(ref _mHeadIndex, head + 1);
 
-                    if (head < m_tailIndex)
+                    if (head < _mTailIndex)
                     {
 
-                        obj = m_array[head & m_mask];
+                        obj = _mArray[head & _mMask];
 
                         return true;
 
@@ -193,7 +191,7 @@ namespace ThreadPoolLibrary
                     else
                     {
 
-                        m_headIndex = head;
+                        _mHeadIndex = head;
 
                         return false;
 
@@ -209,7 +207,7 @@ namespace ThreadPoolLibrary
                 if (taken)
                 {
 
-                    Monitor.Exit(m_foreignLock);
+                    Monitor.Exit(_mForeignLock);
                 }
             }
 

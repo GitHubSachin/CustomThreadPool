@@ -14,7 +14,7 @@ namespace ThreadPoolLibrary
         /// <summary>
         /// queue to store user work items for processing.
         /// </summary>
-        private BlockingCollection<ThreadPoolWorkItem> _queue = new BlockingCollection<ThreadPoolWorkItem>();
+        private readonly BlockingCollection<ThreadPoolWorkItem> _queue = new BlockingCollection<ThreadPoolWorkItem>();
 
         private readonly ThreadPoolSettings _settings;
         private readonly CancellationToken _cancelToken;
@@ -30,7 +30,7 @@ namespace ThreadPoolLibrary
         private DateTime _lastItemProcesTime = DateTime.UtcNow;
 
         // To avoid confusion with other Timer classes, we use the fully-qualified name of System.Timers.Timer instead of a using statement for System.Timers. 
-        private System.Timers.Timer _timer;
+        private readonly System.Timers.Timer _timer;
 
         /// <summary>
         /// dedicated thread which processes the work items in this pool worker.

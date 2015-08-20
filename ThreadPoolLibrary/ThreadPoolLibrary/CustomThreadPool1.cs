@@ -157,7 +157,7 @@ namespace ThreadPoolLibrary
 
             thread.IsBackground = true;
             thread.Start();
-
+            _lastThreadAddTime = DateTime.UtcNow;
             EtwLogger.Log.PoolWorkerStart(thread.Name);
         }
 

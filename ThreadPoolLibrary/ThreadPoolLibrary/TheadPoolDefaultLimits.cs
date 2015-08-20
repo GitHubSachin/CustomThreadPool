@@ -2,6 +2,9 @@
 
 namespace ThreadPoolLibrary
 {
+    /// <summary>
+    /// Defines the default limits for various runtime settings on thread pool.
+    /// </summary>
     internal static class TheadPoolDefaultLimits
     {
         /// <summary>
@@ -26,6 +29,9 @@ namespace ThreadPoolLibrary
         /// </summary>
         public const int DefaultQueueItemArrivalWaitTimeout = 100; //100 ms seconds to wait
 
+        /// <summary>
+        /// Default wait time for new thread to be added in the pool. This is to ensure when sudden high workloads arrive we dont create threads in the pool and cause further contention on processing.
+        /// </summary>
         public const int DefaultNewThreadWaitTme = 5*1000; //5 seconds
     }
 }
