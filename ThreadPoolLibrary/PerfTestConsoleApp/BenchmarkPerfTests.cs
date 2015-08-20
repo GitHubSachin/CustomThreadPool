@@ -9,7 +9,8 @@ namespace PerfTestConsoleApp
     {
         Default = 0,
         Custom1 = 1,
-        Custom2 = 2
+        Custom2 = 2,
+        Custom3 = 3
     }
 
     internal class TestConfiguration
@@ -52,48 +53,52 @@ namespace PerfTestConsoleApp
                         PoolType = testConfig.PoolType,
                         Iteration = (i + 1), //i is zero based
                     };
-                    
-                    var pool = CreatePool(testConfig.PoolType, new ThreadPoolSettings()
+                    using (var tokenSource = new CancellationTokenSource())
                     {
-                        MaxThreads = testConfig.MaxThreads,
-                        MinThreads = testConfig.MinThreads,
-                    });
 
-                    try
-                    {
-                        int g0collects = GC.CollectionCount(0);
-                        int g1collects = GC.CollectionCount(1);
-                        int g2collects = GC.CollectionCount(2);
-
-                        using (var countdown = new CountdownEvent(testConfig.NoOfWorkItems))
+                        var pool = CreatePool(testConfig.PoolType, new ThreadPoolSettings()
                         {
-                            DateTime dtStart = DateTime.UtcNow;
-                            for (int j = 0; j < testConfig.NoOfWorkItems; j++)
-                            {
-                                pool.QueueUserWorkItem((token, userdata) =>
-                                {
-                                    CalculateNthFibonaci(NthFibonaciToCalculate);
-                                    countdown.Signal(1);
+                            MaxThreads = testConfig.MaxThreads,
+                            MinThreads = testConfig.MinThreads,
+                        },tokenSource.Token);
 
-                                }, j);
+                        try
+                        {
+                            int g0collects = GC.CollectionCount(0);
+                            int g1collects = GC.CollectionCount(1);
+                            int g2collects = GC.CollectionCount(2);
+
+                            using (var countdown = new CountdownEvent(testConfig.NoOfWorkItems))
+                            {
+                                DateTime dtStart = DateTime.UtcNow;
+                                for (int j = 0; j < testConfig.NoOfWorkItems; j++)
+                                {
+                                    pool.QueueUserWorkItem((token, userdata) =>
+                                    {
+                                        CalculateNthFibonaci(NthFibonaciToCalculate);
+                                        countdown.Signal(1);
+
+                                    }, j);
+                                }
+                                result.EnqueueTime = DateTime.UtcNow.Subtract(dtStart).TotalSeconds;
+                                countdown.Wait();
+                                //finished, record execution time
+                                result.ProcessingTime = DateTime.UtcNow.Subtract(dtStart).TotalSeconds;
                             }
-                            result.EnqueueTime = DateTime.UtcNow.Subtract(dtStart).TotalSeconds;
-                            countdown.Wait();
-                            //finished, record execution time
-                            result.ProcessingTime = DateTime.UtcNow.Subtract(dtStart).TotalSeconds;
+
+                            result.G0Collect = (GC.CollectionCount(0) - g0collects);
+                            result.G1Collect = (GC.CollectionCount(1) - g1collects);
+                            result.G2Collect = (GC.CollectionCount(2) - g2collects);
+
+                            allresults.Add(result);
+                            tokenSource.Cancel();
                         }
-                        
-                        result.G0Collect = (GC.CollectionCount(0) - g0collects);
-                        result.G1Collect = (GC.CollectionCount(1) - g1collects);
-                        result.G2Collect = (GC.CollectionCount(2) - g2collects);
-          
-                        allresults.Add(result);
-                    }
-                    finally
-                    {
-                        pool.Dispose();
-                        GC.Collect(2);
-                        GC.WaitForPendingFinalizers();
+                        finally
+                        {
+                            pool.Dispose();
+                            GC.Collect(2);
+                            GC.WaitForPendingFinalizers();
+                        }
                     }
                 }
             }
@@ -111,16 +116,18 @@ namespace PerfTestConsoleApp
             return CalculateNthFibonaci((n - 1)) + CalculateNthFibonaci((n - 2));
         }
 
-        public static CustomThreadPool CreatePool(PoolType type,ThreadPoolSettings config)
+        public static CustomThreadPool CreatePool(PoolType type,ThreadPoolSettings config, CancellationToken tk)
         {
             switch (type)
             {
                 case PoolType.Custom1:
-                    return new CustomThreadPool1(config,CancellationToken.None);
+                    return new CustomThreadPool1(config, tk);
                 case PoolType.Custom2:
-                    return new CustomThreadPool2(config, CancellationToken.None);
+                    return new CustomThreadPool2(config, tk);
+                case PoolType.Custom3:
+                    return new CustomThreadPool3(config, tk);
                 default:
-                    return new DefaultThreadPool(config,CancellationToken.None);
+                    return new DefaultThreadPool(config, tk);
             }
         }
         

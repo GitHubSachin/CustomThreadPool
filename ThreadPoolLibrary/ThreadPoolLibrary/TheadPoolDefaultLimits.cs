@@ -25,5 +25,7 @@ namespace ThreadPoolLibrary
         /// Default timeout to wait for new work items to arrive in the queue before deciding to exit or shutdown threadpool threads.
         /// </summary>
         public const int DefaultQueueItemArrivalWaitTimeout = 100; //100 ms seconds to wait
+
+        public const int DefaultNewThreadWaitTme = 5*1000; //5 seconds
     }
 }

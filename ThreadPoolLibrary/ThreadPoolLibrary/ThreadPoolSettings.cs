@@ -21,6 +21,7 @@ namespace ThreadPoolLibrary
             this.MinThreads = TheadPoolDefaultLimits.DefaultMinimumWorkerThreads;
             this.ThreadIdleTimeout = new TimeSpan(0, 0, 0, 0, TheadPoolDefaultLimits.DefaultThreadIdleTimeout);
             this.QueueItemArrivalWaitTimeout = TheadPoolDefaultLimits.DefaultQueueItemArrivalWaitTimeout;
+            this.NewThreadWaitTime = TimeSpan.FromMilliseconds(TheadPoolDefaultLimits.DefaultNewThreadWaitTme);
         }
 
         /// <summary>
@@ -102,5 +103,17 @@ namespace ThreadPoolLibrary
         /// This is amount of time a thread will wait for work item arrival in the queue. This is ONLY used in CustomThreadPool1 implemention where we use competing consumer pattern to pick items from one signle queue.
         /// </summary>
         internal int QueueItemArrivalWaitTimeout { get; set; }
+
+        /// <summary>
+        /// flag to indicate if user would like to pass execution context to the pool thread or not.
+        /// </summary>
+        public bool EnableExecutionContext { get; set; }
+
+        /// <summary>
+        /// Amount of time in milliseconds to wait before creating new thread since last new thread was added to the pool.
+        /// This is to avoid suddenly creating many threads to pools max capacity if there are constant spikes on workload. This time gives some buffer to let existing threads give chance to handle workload before adding new threads, 
+        /// because just adding threads continously might cause contention on getting items out of pool queue and affect overall performance adversely.
+        /// </summary>
+        internal TimeSpan NewThreadWaitTime { get; set; }
     }
 }

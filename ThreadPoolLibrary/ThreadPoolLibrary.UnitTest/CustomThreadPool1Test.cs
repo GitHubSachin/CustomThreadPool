@@ -114,13 +114,14 @@ namespace ThreadPoolLibrary.UnitTest
                 MaxThreads = 2,
                 MinThreads = 1,
                 ThreadIdleTimeout = new TimeSpan(0, 0, 0, 0, 5000), //5 sec. thread idle timeout
+                NewThreadWaitTime = TimeSpan.FromMilliseconds(0),
             };
 
             //Act
             using (var pool = new CustomThreadPool1(settings, CancellationToken.None))
             {
                 //Act
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < 100000; i++)
                 {
                     pool.QueueUserWorkItem((c, o) =>
                     {
@@ -128,14 +129,14 @@ namespace ThreadPoolLibrary.UnitTest
                     }, null);
                     
                 }
-
+                //Thread.Sleep(10);
                 //Assert
                 Assert.AreEqual(2, pool.TotalThreads);
             }
         }
 
         [TestMethod]
-        public void Ensure_ThreadPool_Shriks_To_MinimumThreads()
+        public void Ensure_ThreadPool_Shrinks_To_MinimumThreads()
         {
             //Arrange
             var settings = new ThreadPoolSettings()
@@ -143,13 +144,14 @@ namespace ThreadPoolLibrary.UnitTest
                 MaxThreads = 3,
                 MinThreads = 1,
                 ThreadIdleTimeout = new TimeSpan(0, 0, 0, 0, 100), //1 ms thread idle timeout
+                NewThreadWaitTime = TimeSpan.FromMilliseconds(0),
             };
 
             //Act
             using (var pool = new CustomThreadPool1(settings, CancellationToken.None))
             {
                 //Act
-                for (int i = 0; i < 100; i++)
+                for (int i = 0; i < 10000; i++)
                 {
                     pool.QueueUserWorkItem((c, o) =>
                     {
@@ -242,10 +244,10 @@ namespace ThreadPoolLibrary.UnitTest
                     //send cancel request to the pool
                     tokenSrc.Cancel();
                     //try to enqueue another item
-                    Assert.AreEqual(1,pool.TotalThreads); //still 1 thread running.
+                    Assert.AreEqual(1,pool.TotalThreads); //0 thread running.
                     //wait for 5 seconds now and see if thread have exicted
                     Thread.Sleep(new TimeSpan(0, 0, 0, 6));
-                    Assert.AreEqual(0, pool.TotalThreads); //zero threads
+                    Assert.AreEqual(0, pool.TotalThreads); // after WI is complete, thread will exit
                 }
             }
         }

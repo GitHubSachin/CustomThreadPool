@@ -1,23 +1,26 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ThreadPoolLibrary.UnitTest
 {
     [TestClass]
-    public class CustomThreadPool2Test
+    public class CustomThreadPool3Test
     {
-
         [TestMethod]
         public void Ensure_NewPool_HasUniqueName()
         {
             string name1, name2;
-            using (var pool = new CustomThreadPool2(CancellationToken.None))
+            using (var pool = new CustomThreadPool3(CancellationToken.None))
             {
                 Assert.IsNotNull(pool.Name);
                 name1 = pool.Name;
             }
-            using (var pool = new CustomThreadPool2(CancellationToken.None))
+            using (var pool = new CustomThreadPool3(CancellationToken.None))
             {
                 Assert.IsNotNull(pool.Name);
                 name2 = pool.Name;
@@ -30,9 +33,15 @@ namespace ThreadPoolLibrary.UnitTest
         {
             bool itemprocessed = false;
             //Arrange
+            var settings = new ThreadPoolSettings()
+            {
+                MaxThreads = 2,
+                MinThreads = 1,
+                ThreadIdleTimeout = new TimeSpan(0, 0, 0, 0, 10), //10 ms thread idle timeout
+            };
             using (var tokenSrc = new CancellationTokenSource())
             {
-                using (var pool = new CustomThreadPool2(tokenSrc.Token))
+                using (var pool = new CustomThreadPool3(settings, tokenSrc.Token))
                 {
                     var queued = pool.QueueUserWorkItem((c, o) =>
                     {
@@ -41,7 +50,8 @@ namespace ThreadPoolLibrary.UnitTest
                     }, null);
 
                     Assert.IsTrue(queued);
-                    Assert.AreEqual(pool.TotalThreads, 1);
+
+                    Assert.AreEqual(1, pool.TotalThreads);
 
                     //Act
                     //send cancel request to the pool
@@ -55,7 +65,6 @@ namespace ThreadPoolLibrary.UnitTest
 
                     //Assert
                     Assert.IsFalse(queued); //after cancel, user cant queue new work
-                    Assert.IsTrue(pool.TotalThreads >= 0); //there should be upto 0 working threads because cancel will signal all threads to exit
                 }
             }
         }
@@ -66,7 +75,7 @@ namespace ThreadPoolLibrary.UnitTest
             //Arrange
             using (var tokenSrc = new CancellationTokenSource())
             {
-                using (var pool = new CustomThreadPool2(tokenSrc.Token))
+                using (var pool = new CustomThreadPool3(tokenSrc.Token))
                 {
                     //Act
                     for (int i = 0; i < 10; i++)
@@ -90,11 +99,11 @@ namespace ThreadPoolLibrary.UnitTest
             {
                 MaxThreads = 100,
                 MinThreads = 10,
-                ThreadIdleTimeout = new TimeSpan(0, 0, 0, 0, 10), //10 ms thread idle timeout
+                ThreadIdleTimeout = TimeSpan.FromMilliseconds(1), //1sec thread idle timeout
             };
 
             //Act
-            using (var pool = new CustomThreadPool2(settings, CancellationToken.None))
+            using (var pool = new CustomThreadPool3(settings, CancellationToken.None))
             {
                 //Assert
                 Assert.AreEqual(10, pool.TotalThreads);
@@ -106,32 +115,34 @@ namespace ThreadPoolLibrary.UnitTest
 
         }
 
+
         [TestMethod]
         public void Ensure_ThreadPool_Runs_MaximumThreads()
         {
             //Arrange
             var settings = new ThreadPoolSettings()
             {
-                MaxThreads = 2,
+                MaxThreads = 3,
                 MinThreads = 1,
                 ThreadIdleTimeout = new TimeSpan(0, 0, 0, 0, 5000), //5 sec. thread idle timeout
+                NewThreadWaitTime = TimeSpan.FromMilliseconds(0),
             };
 
             //Act
-            using (var pool = new CustomThreadPool2(settings, CancellationToken.None))
+            using (var pool = new CustomThreadPool3(settings, CancellationToken.None))
             {
                 //Act
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < 10000; i++)
                 {
                     pool.QueueUserWorkItem((c, o) =>
                     {
-                        Thread.Sleep(1);
+                        Thread.Sleep(100);
                     }, null);
 
                 }
 
                 //Assert
-                Assert.AreEqual(2, pool.TotalThreads);
+                Assert.AreEqual(3, pool.TotalThreads);
             }
         }
 
@@ -141,29 +152,32 @@ namespace ThreadPoolLibrary.UnitTest
             //Arrange
             var settings = new ThreadPoolSettings()
             {
-                MaxThreads = 3,
+                MaxThreads = 4,
                 MinThreads = 1,
-                ThreadIdleTimeout = new TimeSpan(0, 0, 0, 0, 1), //1 ms thread idle timeout,
-                NewThreadWaitTime = TimeSpan.FromMilliseconds(1),
+                ThreadIdleTimeout = new TimeSpan(0, 0, 0, 0, 5), //5 ms thread idle timeout
+                NewThreadWaitTime = TimeSpan.FromMilliseconds(0),
             };
 
             //Act
-            using (var pool = new CustomThreadPool2(settings, CancellationToken.None))
+            using (var pool = new CustomThreadPool3(settings, CancellationToken.None))
             {
                 //Act
-                for (int i = 0; i < 10000; i++)
+                for (int i = 0; i < 100000; i++)
                 {
                     pool.QueueUserWorkItem((c, o) =>
                     {
-                        //Thread.Sleep(1);
+                        //Thread.Sleep(0);
                     }, null);
 
                 }
-
                 //Assert
-                Assert.AreEqual(3, pool.TotalThreads); //ensure reached to max limit
-                //now wait for 100 ms that ensures all items are processed
-                Thread.Sleep(1000);
+                Assert.AreEqual(4, pool.TotalThreads); //ensure reached to max limit
+               //wait till all threads are drained
+                while (pool.TotalThreads > settings.MinThreads)
+                {
+                    //Console.WriteLine(pool.TotalThreads);
+                    Thread.Sleep(10);
+                }
                 //ensure pool reached to min size now
                 Assert.AreEqual(1, pool.TotalThreads);
             }
@@ -176,7 +190,7 @@ namespace ThreadPoolLibrary.UnitTest
             //Arrange
             using (var tokenSrc = new CancellationTokenSource())
             {
-                using (var pool = new CustomThreadPool2(tokenSrc.Token))
+                using (var pool = new CustomThreadPool3(tokenSrc.Token))
                 {
                     //Act
                     tokenSrc.Cancel(); //sends cancel signal to the pool
@@ -197,7 +211,7 @@ namespace ThreadPoolLibrary.UnitTest
             //Arrange
             using (var tokenSrc = new CancellationTokenSource())
             {
-                using (var pool = new CustomThreadPool2(tokenSrc.Token))
+                using (var pool = new CustomThreadPool3(tokenSrc.Token))
                 {
                     pool.UserWorkItemException += (object sender, WorkItemEventArgs e) =>
                     {
@@ -227,33 +241,26 @@ namespace ThreadPoolLibrary.UnitTest
             //Arrange
             using (var tokenSrc = new CancellationTokenSource())
             {
-                using (var pool = new CustomThreadPool2(tokenSrc.Token))
+                using (var pool = new CustomThreadPool3(tokenSrc.Token))
                 {
-                    pool.UserWorkItemException += (object sender, WorkItemEventArgs e) =>
-                    {
-                        Console.WriteLine(e.Exception.ToString());
-                    };
-
                     //Act
                     var queued = pool.QueueUserWorkItem((c, o) =>
                     {
-                        Thread.Sleep(new TimeSpan(0, 0, 0, 1)); //1 seconds
+                        Thread.Sleep(TimeSpan.FromSeconds(60)); //60 seconds
 
                     }, null);
 
                     Assert.IsTrue(queued);
-
+                    Thread.Sleep(TimeSpan.FromMilliseconds(100));
                     //send cancel request to the pool
                     tokenSrc.Cancel();
-                    //try to enqueue another item
+                    
                     Assert.AreEqual(1, pool.TotalThreads); //still 1 thread running.
                     //wait for 5 seconds now and see if thread have exicted
-                    Thread.Sleep(new TimeSpan(0, 0, 0, 6));
-                    Assert.AreEqual(0, pool.TotalThreads); //1 threads
+                    Thread.Sleep(TimeSpan.FromSeconds(1));
+                    Assert.AreEqual(1, pool.TotalThreads); //since the task is very long running, pool will let it finish before exiting all threads
                 }
             }
         }
-
-
     }
 }

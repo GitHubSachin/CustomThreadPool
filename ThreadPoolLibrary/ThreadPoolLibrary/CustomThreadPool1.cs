@@ -103,6 +103,7 @@ namespace ThreadPoolLibrary
         }
 
         public override event EventHandler<WorkItemEventArgs> UserWorkItemException;
+        private DateTime _lastThreadAddTime = DateTime.UtcNow;
 
         /// <summary>
         /// Enqueues a new work on the thread pool. The work will be either immediately processed by available worker thread in the pool or scheduled as per load on the pool.
@@ -117,7 +118,7 @@ namespace ThreadPoolLibrary
 
             var job = new ThreadPoolWorkItem(target, userData, _poolStopToken);
             _queue.Enqueue(job);
-            bool newThreadNeeded = (_queue.Count > TotalThreads) && (TotalThreads < _settings.MaxThreads);
+            bool newThreadNeeded = (_queue.Count > TotalThreads) && (TotalThreads < _settings.MaxThreads) && (DateTime.UtcNow.Subtract(_lastThreadAddTime) > _settings.NewThreadWaitTime);
             if (newThreadNeeded)
             {
                 StartWorkerThread(_settings.MaxThreads);

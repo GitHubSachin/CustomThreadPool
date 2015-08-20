@@ -74,8 +74,12 @@ namespace ThreadPoolLibrary
         {
             try
             {
-                //stops enumurating and poping out new work items from the queue
-                _queue.CompleteAdding();
+                lock (_queue)
+                {
+                    //stops enumurating and poping out new work items from the queue
+                    _queue.CompleteAdding();
+                }
+
                 //closes the timer event to watch for idle timeout, there is no need because cancel token is already set.
                 _timer.Close();
                 EtwLogger.Log.PoolThreadAborted(this.Name);
@@ -88,15 +92,19 @@ namespace ThreadPoolLibrary
 
         public bool EnqueueWorkItem(ThreadPoolWorkItem item)
         {
-            if (_status != PoolWorkerStatus.Running)
+            lock (_queue)
             {
-                //make sure to initialize the thread.
-                return false;
+                if (_status != PoolWorkerStatus.Running)
+                {
+                    //make sure to initialize the thread.
+                    return false;
+                }
+
+
+                _queue.Add(item);
+                Interlocked.Increment(ref _taskCount);
+                return true;
             }
-            //_queue.Enqueue(item);
-            _queue.Add(item);
-            Interlocked.Increment(ref _taskCount);
-            return true;
         }
 
         internal int TaskCount { get { return _taskCount; } }
@@ -109,7 +117,10 @@ namespace ThreadPoolLibrary
             if (ShouldThreadExit())
             {
                 this._status = PoolWorkerStatus.Exiting;
-                _queue.CompleteAdding();
+                lock (_queue)
+                {
+                    _queue.CompleteAdding();
+                }
             }
         }
 
@@ -136,11 +147,18 @@ namespace ThreadPoolLibrary
                 }
 
             }
+            catch (OperationCanceledException op)
+            {
+                OnWorkItemException(null, op);
+            }
             finally
             {
                 _status = PoolWorkerStatus.Exiting;
                 WorkerThreadExited();
-                _queue.Dispose();
+                lock (_queue)
+                {
+                   _queue.Dispose();
+                }
             }
         }
 
@@ -194,7 +212,7 @@ namespace ThreadPoolLibrary
                 WorkItemExceptionHandler(this, new WorkItemEventArgs()
                 {
                     Exception = e,
-                    UserData = job.UserData,
+                    UserData = job == null ? null : job.UserData,
                 });
             }
         }

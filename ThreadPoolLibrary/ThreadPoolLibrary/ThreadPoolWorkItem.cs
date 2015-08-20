@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace ThreadPoolLibrary
 {
@@ -10,7 +11,7 @@ namespace ThreadPoolLibrary
         private readonly Delegate _targetDelegate;
         private readonly System.Threading.CancellationToken _token;
         private readonly object _userData;
-
+        
         public ThreadPoolWorkItem(Action<System.Threading.CancellationToken, object> target,
             object userData,
             System.Threading.CancellationToken cancellationToken)
@@ -38,6 +39,8 @@ namespace ThreadPoolLibrary
 
             _targetDelegate.DynamicInvoke(_token, _userData);
         }
+
+        public ExecutionContext ExecutionCtx { get; set; }
     }
 
 }

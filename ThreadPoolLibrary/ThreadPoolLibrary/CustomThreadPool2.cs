@@ -183,6 +183,7 @@ namespace ThreadPoolLibrary
                 }
 
                 _workerThreads.TryGetValue(_workerKeys[i], out n);
+                
             }
             return n;
         }
@@ -224,7 +225,6 @@ namespace ThreadPoolLibrary
             lock (_lock)
             {
                 _workerKeys.Remove(e.ThreadName);
-                //Monitor.Pulse(_lock);
             }
 
             if (w != null)
@@ -258,7 +258,7 @@ namespace ThreadPoolLibrary
                     }
                 }
 
-                if (w.Status != PoolWorkerStatus.Exiting)
+                if (w.Status == PoolWorkerStatus.Running)
                 {
                     w.EnqueueWorkItem(job);
                     EtwLogger.Log.PoolWorkerSelected(w.Name, w.TaskCount);
