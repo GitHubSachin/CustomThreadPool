@@ -1,4 +1,4 @@
-﻿# CustomThreadPool
+# CustomThreadPool
 Custom ThreadPool Implementation for compute work on servers (Sample compute is N th Fibonacci Number).
 See benchmark results at the bottom of the page.
 
@@ -35,7 +35,7 @@ PS> Install-package CustomThreadPool
 You can create a `CustomThreadPool` instance via the following API:
 
 ```csharp
-using (var threadPool = new CustomThreadPool1(new CustomThreadPoolSettings(10,20),CancellationToken.None))
+using (var threadPool = new CustomThreadPool1(new CustomThreadPoolSettings(1,8),CancellationToken.None))
 {
     threadPool.QueueUserWorkItem(() => { ... }));
 }
@@ -43,7 +43,7 @@ using (var threadPool = new CustomThreadPool1(new CustomThreadPoolSettings(10,20
 
 This creates a `CustomThreadPool1` object which allocates a fixed minimum number of threads, each will process enqueued work items in parallel.
 
-# CustomThreadPool1
+# CustomThreadPool1:
 This implementation have one global queue, and worker threads trying to dequeue items from it and process it, after I wrote this, I quickly realized this solution makes large contention on global queue, as number of threads increase, the performance degrades because it takes long time to enqueue work items and worker threads are waiting for lock releases.
 however this works well on low core systems on low concurrency levels.
 So I had to think of another approach.
@@ -53,12 +53,7 @@ Here I tried to avoid global queue, by partitioning the queue across each worker
 1. round robin across all workers in the pool, this is simple, but not optimal because some work will be stuck behind some long running operations already running on workers
 2. minimum assigned task strategy will assign the task to any of the worker threads with the fewest tasks already running. Here I wrote algorithm to randomly choose among the worker with the fewest tasks.
 
-#Next Steps:
-Now after having both implementation ready, I decided to test and compare with standard .net threadpool, and realized that the data structures and locking I am using for queue is causing bad performance on enqueue, 
-so now I am experimenting on another idea, what if I can create some data structure so that I can enqueue and dequeue work as fast as possible without any locking overhead at all??
-next step is to replace .net queue class with a doubly linked list which will be written such a way that queue will not use any locks and will just do a form of a spin lock... let’s see how much it helps.
-
-#CustomThreadPool3 (coming soon..)
+#CustomThreadPool3:
 This implementation I am using both approaches of #1 and #2 above with addition to some twist on optimizing the work scheduling and assignment. It turns out that most of the multithreaded applications involve some sort of recursive divide and conquer kind of work loads, in such cases, it’s important to pay attention on how you enqueue the work, for example the work enqueued from the pool threads can be added to its local queue, this will be very fast because there will be no locking on local queue. However new work coming from the outside pool thread can go to global queue (with some locking involved). With this approach we need to design a thread local queue which is lock free for local operations but uses some locking when accessed from another threads, this is how we distribute work efficiently. The algorithm works like this:
 
 1. There is One global queue
@@ -74,36 +69,36 @@ This implementation I am using both approaches of #1 and #2 above with addition 
 
 Calculate nth Fibonacci number in its series.
 
-| Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime | G0  | G1 | G3 |
+| Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime | G0  | G1 | G2 |
 |:---|:---------|:----|:----|:----------|:------------|:------------|:----|:---|:---|
-| 1  | Custom1  | 10  | 100 | 1000      | 0.0156225   | 0.156249    | 0   | 0  | 0  |
-| 1  | Custom1  | 10  | 100 | 10000     | 0           | 0.5594834   | 1   | 0  | 0  |
-| 1  | Custom1  | 10  | 100 | 100000    | 0.0312544   | 4.468801    | 11  | 1  | 0  |
-| 1  | Custom1  | 10  | 100 | 1000000   | 0.7187591   | 53.9518641  | 144 | 13 | 2  |
+| 1  | Custom1  | 1   | 8   | 1000      | 0           | 0.0937704   | 0   | 0  | 0  |
+| 1  | Custom1  | 1   | 8   | 10000     | 0           | 0.8906363   | 1   | 0  | 0  |
+| 1  | Custom1  | 1   | 8   | 100000    | 0.0312329   | 8.9634327   | 11  | 1  | 0  |
+| 1  | Custom1  | 1   | 8   | 1000000   | 0.4375067   | 100.9626534 | 142 | 16 | 2  |
 
-| Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime | G0  | G1 | G3 |
+| Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime | G0  | G1 | G2 |
 |:---|:---------|:----|:----|:----------|:------------|:------------|:----|:---|:---|
-| 1  | Custom2  | 10  | 100 | 1000      | 0.1144131   | 0.1144131   | 0   | 0  | 0  |
-| 1  | Custom2  | 10  | 100 | 10000     | 1.0781371   | 1.0781371   | 2   | 0  | 0  |
-| 1  | Custom2  | 10  | 100 | 100000    | 6.1453699   | 8.5203974   | 16  | 2  | 0  |
-| 1  | Custom2  | 10  | 100 | 1000000   | 25.5627913  | 61.3913243  | 140 | 14 | 3  |
+| 1  | Custom2  | 1   | 8   | 1000      | 0.078124    | 0.0937495   | 0   | 0  | 0  |
+| 1  | Custom2  | 1   | 8   | 10000     | 0.0781263   | 0.5781337   | 1   | 0  | 0  |
+| 1  | Custom2  | 1   | 8   | 100000    | 0.1875028   | 5.4219523   | 11  | 1  | 0  |
+| 1  | Custom2  | 1   | 8   | 1000000   | 2.2937311   | 58.9468594  | 142 | 12 | 2  |
 
-| Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime | G0 | G1 | G3 |
-|:---|:---------|:----|:----|:----------|:------------|:------------|:----|:---|:---|
-| 1  | .net     | 10  | 100 | 1000      | 0           | 0.0625001   | 0  | 0  | 0  |
-| 1  | .net     | 10  | 100 | 10000     | 0.0156259   | 0.5937573   | 0  | 0  | 0  |
-| 1  | .net     | 10  | 100 | 100000    | 0.2031282   | 5.625063    | 3  | 1  | 0  |
-| 1  | .net     | 10  | 100 | 1000000   | 2.4844049   | 56.0631395  | 31 | 14 | 3  |
+| Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime | G0 | G1 | G2 |
+|:---|:---------|:----|:----|:----------|:------------|:------------|:---|:---|:---|
+| 1  | .net     | 1   | 8   | 1000      | 0           | 0.0625011   | 0  | 0  | 0  |
+| 1  | .net     | 1   | 8   | 10000     | 0           | 0.5468821   | 0  | 0  | 0  |
+| 1  | .net     | 1   | 8   | 100000    | 0.1093778   | 6.2934229   | 3  | 1  | 0  |
+| 1  | .net     | 1   | 8   | 1000000   | 1.6597138   | 55.7233629  | 31 | 15 | 3  |
 
-| Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime | G0  | G1 | G3 |
+| Id | PoolType | Min | Max | WorkItems | EnqueueTime | ProcessTime | G0  | G1 | G2 |
 |:---|:---------|:----|:----|:----------|:------------|:------------|:----|:---|:---|
-| 1  | Custom3  | 10  | 100 | 1000      | 0           | 0.0781253   | 0   | 0  | 0  |
-| 1  | Custom3  | 10  | 100 | 10000     | 0           | 0.6562574   | 0   | 0  | 0  |
-| 1  | Custom3  | 10  | 100 | 100000    | 0.2187507   | 6.1875692   | 12  | 3  | 0  |
-| 1  | Custom3  | 10  | 100 | 1000000   | 0.8437597   | 57.5162816  | 142 | 12 | 1  |
+| 1  | Custom3  | 1   | 8   | 1000      | 0           | 0.2031273   | 0   | 0  | 0  |
+| 1  | Custom3  | 1   | 8   | 10000     | 0.0156236   | 1.2266493   | 0   | 0  | 0  |
+| 1  | Custom3  | 1   | 8   | 100000    | 0.0156293   | 10.5210545  | 12  | 2  | 0  |
+| 1  | Custom3  | 1   | 8   | 1000000   | 0.4062564   | 96.386409   | 139 | 15 | 1  |
 
 ## Some thoughts on Multi-Threaded Pool
-
+The right implementation depends on type of problem you are trying to solve, Before you adventure to create your own pool, try CLR team's default threadpool, it might just work right. In special cases you may have to create your own implementation.
 Improper configuration of a thread pool can have a serious impact on the performance of your application. This documentation describes the issues and things you need to consider when designing your application which uses this thread pool implementation.
 A thread pool is a collection of threads which is processing the user's work items as they are enqueued. The user work item is a delegate supplied by application code, this delegate contains any compute or IO work that user needs to perform concurrently.
 Configuring a thread pool to support min, max limits implies that the application is prepared to dispatch work item operation concurrently.
@@ -126,8 +121,3 @@ how to create non blocking queue??
 For workload which has very small execution time, it’s best to keep max limit on pool size to smaller, this gives better performance, when used with workloads with higher execution time, adding more threads to the pool starts to benefit.
 After some limit actually bigger pool size affects performance adversely.
 
-## License
-
-See [LICENSE](LICENSE) for details.
-
-Copyright (C) 2015 GitHubSachin
