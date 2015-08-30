@@ -7,38 +7,38 @@ namespace PerfTestConsoleApp
     {
         static void Main(string[] args)
         {
-            
+
             //Build each scenario to test and execute it
             var scenario1 = new List<TestConfiguration>()
             {
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 1000,
                     PoolType = PoolType.Custom1
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 10000,
                     PoolType = PoolType.Custom1
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 100000,
                     PoolType = PoolType.Custom1
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 1000000,
                     PoolType = PoolType.Custom1
@@ -53,32 +53,32 @@ namespace PerfTestConsoleApp
             {
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 1000,
                     PoolType = PoolType.Custom2
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 10000,
                     PoolType = PoolType.Custom2
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 100000,
                     PoolType = PoolType.Custom2
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 1000000,
                     PoolType = PoolType.Custom2
@@ -92,32 +92,32 @@ namespace PerfTestConsoleApp
             {
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 1000,
                     PoolType = PoolType.Default
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 10000,
                     PoolType = PoolType.Default
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 100000,
                     PoolType = PoolType.Default
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 1000000,
                     PoolType = PoolType.Default
@@ -132,32 +132,32 @@ namespace PerfTestConsoleApp
             {
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 1000,
                     PoolType = PoolType.Custom3
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 10000,
                     PoolType = PoolType.Custom3
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 100000,
                     PoolType = PoolType.Custom3
                 },
                 new TestConfiguration()
                 {
-                    MaxThreads = 100,
-                    MinThreads = 10,
+                    MaxThreads = 8,
+                    MinThreads = 1,
                     NoOfIterations = 1,
                     NoOfWorkItems = 1000000,
                     PoolType = PoolType.Custom3

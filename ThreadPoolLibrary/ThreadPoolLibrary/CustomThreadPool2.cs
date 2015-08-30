@@ -243,7 +243,7 @@ namespace ThreadPoolLibrary
             {
                 //var w = SelectMinLoadRandomNode();
                 var w = SelectRoundRobinNode();
-                if (w.TaskCount != 0)
+                if (w.TaskCount != 0 && _workerKeys.Count < _settings.MaxThreads )
                 {
                     lock (_lock)
                     {
@@ -253,7 +253,6 @@ namespace ThreadPoolLibrary
                             w = AllocDelegate();
                             _workerThreads.TryAdd(w.Name, w);
                             _workerKeys.Add(w.Name);
-                            //Console.WriteLine(_workerKeys.Count);
                         }
                     }
                 }

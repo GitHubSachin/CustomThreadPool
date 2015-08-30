@@ -123,6 +123,12 @@ namespace ThreadPoolLibrary
             {
                 StartWorkerThread(_settings.MaxThreads);
             }
+
+            lock (_stateLock)
+            {
+                Monitor.PulseAll(_stateLock);
+            }
+            
             return true;
         }
 
